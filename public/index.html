@@ -1,5 +1,6 @@
 <html>
     <head>
+        <title>Live Message Broadcast</title>
         <style>
             * {
                 margin:0px;
@@ -30,23 +31,45 @@
                 padding: 15px;
                 border-radius: 10px;;
             }
+
+            .message-row small {
+                color: #888;
+            }
         </style>
+
+        <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
     </head>
     <body>
         <div class="container">
             <div class="message">
                 <h1>Your Message</h1>
                 <div class="message-rows">
-                    <div class="message-row">
-                        <p>This is message</p>
-                        <small>2020-12-12 11:00:00</small>
-                    </div>
-                    <div class="message-row">
-                        <p>This is message</p>
-                        <small>2020-12-12 11:00:00</small>
-                    </div>
                 </div>
             </div>
         </div>
+
+        <script>
+            function initWS(){
+                if(!window.WebSocket) {
+                    alert("Your browser doesn't support WebSocket")
+                    return
+                }
+
+				ws = new WebSocket("ws://localhost:3000/api/message/ws");
+				ws.onmessage = function(msg) {
+					var res = JSON.parse(msg.data);
+                    var html = '<div class="message-row">';
+                    html += '<p>' + res["Message"] + '</p>';
+                    html += '<small>' + res["CreatedAt"] + '</small>';
+                    html += '</div>';
+
+                    $(".message-rows").append(html)
+				}
+            }
+
+			$(function(){
+                initWS();
+			})()
+		</script>
     </body>
 </html>

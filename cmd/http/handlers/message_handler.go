@@ -1,22 +1,27 @@
 package handlers
 
 import (
+	"log"
+	"net/http"
+
 	"github.com/exralvio/go-simple-message/cmd/http/requests"
+	"github.com/exralvio/go-simple-message/common"
 	"github.com/exralvio/go-simple-message/repositories"
 	"github.com/exralvio/go-simple-message/services"
 	"github.com/labstack/echo"
-	"net/http"
 )
 
 // MessageHandler struct
 type MessageHandler struct {
-	service services.MessageServiceInterface
+	service   services.MessageServiceInterface
+	websocket common.Websocket
 }
 
 // NewMessagehandler func
-func NewMessagehandler(storage *repositories.MessageStorage) *MessageHandler {
+func NewMessagehandler(storage *repositories.MessageStorage, websocket common.Websocket) *MessageHandler {
 	handler := &MessageHandler{
-		service: services.NewMessageService(storage),
+		service:   services.NewMessageService(storage),
+		websocket: websocket,
 	}
 
 	return handler
@@ -37,6 +42,14 @@ func (handler *MessageHandler) SendMessage(c echo.Context) error {
 
 	result, err := handler.service.Create(request)
 	if err != nil {
+		c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"error": err.Error(),
+		})
+
+		return nil
+	}
+
+	if err := handler.websocket.Broadcast(result); err != nil {
 		c.JSON(http.StatusBadRequest, map[string]interface{}{
 			"error": err.Error(),
 		})
@@ -67,5 +80,11 @@ func (handler *MessageHandler) GetMessage(c echo.Context) error {
 
 // MessageWS func
 func (handler *MessageHandler) MessageWS(c echo.Context) error {
-	return c.String(http.StatusOK, "Message Web Socket")
+	err := handler.websocket.NewConnection(c.Response(), c.Request())
+
+	if err != nil {
+		log.Printf("websocket terminated with error: %s", err)
+	}
+
+	return nil
 }
