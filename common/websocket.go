@@ -1,7 +1,6 @@
 package common
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/exralvio/go-simple-message/models"
@@ -14,6 +13,15 @@ type Websocket interface {
 	NewConnection(w http.ResponseWriter, r *http.Request) error
 	Broadcast(data *models.Message) error
 }
+
+// WebSocketConnection struct
+type WebSocketConnection struct {
+	*websocket.Conn
+	ID string
+}
+
+var currentConnection WebSocketConnection
+var activeConnections = make([]*WebSocketConnection, 0)
 
 // Ws struct
 type Ws struct {
@@ -47,20 +55,27 @@ func (s *Ws) NewConnection(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	s.conn = conn
+	connID := r.URL.Query().Get("id")
+	currentConn := WebSocketConnection{Conn: conn, ID: connID}
+	currentConnection = currentConn
+	activeConnections = append(activeConnections, &currentConn)
 
 	return nil
 }
 
 // Broadcast is to send message to opened connection
 func (s *Ws) Broadcast(data *models.Message) error {
-	if s.conn == nil {
-		return errors.New("no listener are connected")
+	for _, conn := range activeConnections {
+		err := conn.WriteJSON(SocketResponse{
+			ID:        data.ID,
+			Message:   data.Message,
+			CreatedAt: data.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+
+		if err != nil {
+			return err
+		}
 	}
 
-	return s.conn.WriteJSON(SocketResponse{
-		ID:        data.ID,
-		Message:   data.Message,
-		CreatedAt: data.CreatedAt.Format("2006-01-02 15:04:05"),
-	})
+	return nil
 }

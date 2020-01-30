@@ -49,13 +49,14 @@
         </div>
 
         <script>
-            function initWS(){
+            function initWS(connID){
                 if(!window.WebSocket) {
                     alert("Your browser doesn't support WebSocket")
                     return
                 }
 
-				ws = new WebSocket("ws://localhost:3000/api/message/ws");
+                var wsURL = "ws://localhost:3000/api/message/ws?id="+connID
+				ws = new WebSocket(wsURL);
 				ws.onmessage = function(msg) {
 					var res = JSON.parse(msg.data);
                     var html = '<div class="message-row">';
@@ -67,8 +68,14 @@
 				}
             }
 
+            function getConnID() {
+                let r = Math.random().toString(36).substring(2);
+                return r
+            }
+
 			$(function(){
-                initWS();
+                connID = getConnID()
+                initWS(connID);
 			})()
 		</script>
     </body>
